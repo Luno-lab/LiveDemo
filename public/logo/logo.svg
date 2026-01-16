@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="567px" height="567px" viewBox="0 0 567 567" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>dark</title>
+    <g id="页面-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="dark">
+            <rect id="背景" fill="#000000" x="0" y="0" width="567" height="567" rx="40"></rect>
+            <g id="编组" transform="translate(191, 134)">
+                <path d="M4,0 L12,0 L12,0 L12,300 L4,300 C1.790861,300 1.3527075e-16,298.209139 0,296 L0,4 C-2.705415e-16,1.790861 1.790861,2.705415e-16 4,0 Z" id="矩形" fill="#FFFFFF"></path>
+                <rect id="矩形" fill="#FFFFFF" x="22" y="0" width="12" height="300"></rect>
+                <rect id="矩形" fill="#FFFFFF" x="44" y="0" width="12" height="300"></rect>
+                <rect id="矩形" fill="#FFFFFF" x="130" y="264" width="55" height="12"></rect>
+                <path d="M78,4 L78,236 C78,238.209139 79.790861,240 82,240 L181,240 C183.209139,240 185,241.790861 185,244 L185,248 C185,250.209139 183.209139,252 181,252 L82,252 C79.790861,252 78,253.790861 78,256 L78,260 C78,262.209139 79.790861,264 82,264 L181,264 C183.209139,264 185,265.790861 185,268 L185,272 C185,274.209139 183.209139,276 181,276 L82,276 C79.790861,276 78,277.790861 78,280 L78,284 C78,286.209139 79.790861,288 82,288 L181,288 C183.209139,288 185,289.790861 185,292 L185,296 C185,298.209139 183.209139,300 181,300 L70,300 C67.790861,300 66,298.209139 66,296 L66,4 C66,1.790861 67.790861,2.705415e-16 70,0 L74,0 C76.209139,-4.05812251e-16 78,1.790861 78,4 Z" id="路径" fill="#FFFFFF"></path>
+                <rect id="矩形" fill="#FFFFFF" x="66" y="0" width="5" height="300"></rect>
+                <rect id="矩形" fill="#FFFFFF" x="77" y="245" width="108" height="7"></rect>
+                <rect id="矩形" fill="#000000" x="78" y="252" width="7" height="12"></rect>
+                <rect id="矩形" fill="#000000" x="78" y="276" width="7" height="12"></rect>
+                <rect id="矩形" fill="#FFFFFF" x="130" y="288" width="55" height="7"></rect>
+            </g>
+        </g>
+    </g>
+</svg>
