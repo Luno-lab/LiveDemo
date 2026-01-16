@@ -11,7 +11,9 @@ import {
 import { ConnectionStatus, createConfig, useStatus } from "@luno-kit/react";
 import {
   buildConnectors,
-  chains as defaultChains,
+  chainOptions,
+  defaultChainIds,
+  getSelectedChainOptions,
   getSelectedWalletData,
   SUBSCAN_API_KEY,
   walletOptions,
@@ -82,6 +84,21 @@ const colorGroupConfig = [
   { id: "Other", match: () => true },
 ];
 
+const chainGroupConfig = [
+  { id: "Polkadot", match: (chain) => chain.id.startsWith("polkadot") },
+  { id: "Kusama", match: (chain) => chain.id.startsWith("kusama") },
+  { id: "Paseo", match: (chain) => chain.id.startsWith("paseo") },
+  { id: "Westend", match: (chain) => chain.id.startsWith("westend") },
+  { id: "Others", match: () => true },
+];
+
+const chainLabelPrefixes = ["Polkadot", "Kusama", "Paseo", "Westend"];
+const formatChainLabel = (chain) => {
+  const name = chain.name || chain.id;
+  const prefix = chainLabelPrefixes.find((value) => name.startsWith(`${value} `));
+  return prefix ? name.slice(prefix.length + 1) : name;
+};
+
 const formatColorLabel = (token) =>
   token
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
@@ -107,6 +124,22 @@ const groupColorKeys = (keys) => {
       keys: groups.get(config.id) || [],
     }))
     .filter((group) => group.keys.length > 0);
+};
+
+const groupChainOptions = (options) => {
+  const groups = new Map();
+  options.forEach((chain) => {
+    const group =
+      chainGroupConfig.find((config) => config.match(chain))?.id || "Others";
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(chain);
+  });
+  return chainGroupConfig
+    .map((config) => ({
+      id: config.id,
+      options: groups.get(config.id) || [],
+    }))
+    .filter((group) => group.options.length > 0);
 };
 
 const readLunoKitThemeTokens = () => {
@@ -155,6 +188,7 @@ export default function App() {
     "subwallet",
     "talisman",
   ]);
+  const [selectedChains, setSelectedChains] = useState(() => defaultChainIds);
   const [modalSize, setModalSize] = useState("wide");
   const [appName, setAppName] = useState("LunoKit Demo");
   const [decorativeLight, setDecorativeLight] = useState("");
@@ -237,8 +271,14 @@ export default function App() {
     () => getSelectedWalletData(selectedWallets),
     [selectedWallets]
   );
-
-  const chains = defaultChains;
+  const selectedChainOptions = useMemo(
+    () => getSelectedChainOptions(selectedChains),
+    [selectedChains]
+  );
+  const chains = useMemo(
+    () => selectedChainOptions.map((option) => option.chain),
+    [selectedChainOptions]
+  );
 
   const connectors = useMemo(
     () =>
@@ -250,7 +290,7 @@ export default function App() {
   );
 
   const baseConfig = useMemo(() => {
-    if (!connectors.length) return null;
+    if (!connectors.length || chains.length === 0) return null;
     return createConfig({
       appName: appName || "LunoKit Demo",
       chains,
@@ -406,6 +446,10 @@ export default function App() {
     () => groupColorKeys(filteredColorKeys),
     [filteredColorKeys]
   );
+  const groupedChainOptions = useMemo(
+    () => groupChainOptions(chainOptions),
+    [chainOptions]
+  );
   const theme = useMemo(() => {
     const mode = themeMode || "dark";
     const payload = {
@@ -466,6 +510,7 @@ export default function App() {
     const connectorImports = Array.from(
       new Set(selectedWalletData.map((wallet) => wallet.connector))
     );
+    const chainImports = selectedChainOptions.map((chain) => chain.importName);
     const connectorLines = selectedWalletData.map((wallet) => {
       if (wallet.requiresProjectId) {
         return `${wallet.connector}({ projectId: WALLET_CONNECT_ID })`;
@@ -498,7 +543,9 @@ export default function App() {
     const lines = [
       "import { ConnectButton, LunoKitProvider } from \"@luno-kit/ui\";",
       "import { createConfig } from \"@luno-kit/react\";",
-      "import { polkadot } from \"@luno-kit/react/chains\";",
+      chainImports.length
+        ? `import { ${chainImports.join(", ")} } from \"@luno-kit/react/chains\";`
+        : "",
       connectorImports.length
         ? `import { ${connectorImports.join(", ")} } from \"@luno-kit/react/connectors\";`
         : "",
@@ -509,7 +556,9 @@ export default function App() {
       "const SUBSCAN_API_KEY = \"YOUR_SUBSCAN_API_KEY\";",
       "",
       "const queryClient = new QueryClient();",
-      "const chains = [polkadot];",
+      chainImports.length
+        ? `const chains = [${chainImports.join(", ")}];`
+        : "const chains = [];",
       "const baseConfig = createConfig({",
       `  appName: ${JSON.stringify(appName || "My LunoKit App")},`,
       "  chains,",
@@ -559,6 +608,7 @@ export default function App() {
     return lines.join("\n");
   }, [
     selectedWalletData,
+    selectedChainOptions,
     appName,
     modalSize,
     themeMode,
@@ -576,6 +626,16 @@ export default function App() {
         ? prev.filter((id) => id !== walletId)
         : [...prev, walletId]
     );
+  };
+
+  const handleChainToggle = (chainId) => {
+    setSelectedChains((prev) => {
+      if (prev.includes(chainId)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((id) => id !== chainId);
+      }
+      return [...prev, chainId];
+    });
   };
 
   const handleSectionToggle = (sectionId) => {
@@ -649,7 +709,10 @@ export default function App() {
       <div className="pointer-events-none absolute right-12 top-10 h-64 w-64 rounded-full bg-white/5 blur-3xl animate-float-soft" />
 
       <header className="mx-auto w-full max-w-7xl">
-        <div className="flex items-center justify-end">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="font-heading text-xs uppercase tracking-[0.32em] text-white/60">
+            LunoKit Demo
+          </p>
           <a
             href={documentationLink}
             target="_blank"
@@ -672,10 +735,7 @@ export default function App() {
             </svg>
           </a>
         </div>
-        <div className="mt-6 space-y-2">
-          <p className="font-heading text-xs uppercase tracking-[0.32em] text-white/60">
-            LunoKit Demo
-          </p>
+        <div className="mt-4 space-y-2">
           <h1 className="text-balance font-heading text-3xl font-semibold text-white sm:text-4xl">
             Wallet Sign-In Builder & Live Preview
           </h1>
@@ -970,6 +1030,71 @@ export default function App() {
                   )}
                 </div>
               </div>
+            </div>
+          </Section>
+
+          <Section
+            id="networks"
+            title="Networks"
+            description="Choose the networks supported by LunoKit (at least one required)."
+            isOpen={openSection === "networks"}
+            onToggle={handleSectionToggle}
+          >
+            <div className="space-y-4">
+              {groupedChainOptions.map((group) => (
+                <div key={group.id} className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/40">
+                    <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
+                    <span>{group.id}</span>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-1 lg:grid-cols-2">
+                    {group.options.map((chain) => {
+                      const isChecked = selectedChains.includes(chain.id);
+                      const isLocked = isChecked && selectedChains.length === 1;
+                      return (
+                        <label
+                          key={chain.id}
+                          htmlFor={`chain-${chain.id}`}
+                          aria-disabled={isLocked}
+                          className={`group flex min-h-[60px] items-center gap-3 rounded-2xl border px-3 py-2 transition-colors ${
+                            isChecked
+                              ? "border-white/60 bg-white/8"
+                              : "border-white/10 bg-black/20 hover:border-white/20 hover:bg-black/40"
+                          } ${
+                            isLocked ? "cursor-not-allowed opacity-70" : "cursor-pointer"
+                          }`}
+                        >
+                          <input
+                            id={`chain-${chain.id}`}
+                            type="checkbox"
+                            checked={isChecked}
+                            disabled={isLocked}
+                            onChange={() => handleChainToggle(chain.id)}
+                            className="peer sr-only"
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-white">
+                              {formatChainLabel(chain)}
+                            </p>
+                            <p className="truncate text-[11px] text-white/45">
+                              {chain.id}
+                            </p>
+                          </div>
+                          <div className="ml-auto flex items-center gap-2">
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-black/40 transition-colors group-hover:border-white/50">
+                              <div
+                                className={`h-2.5 w-2.5 rounded-full ${
+                                  isChecked ? "bg-white" : "bg-transparent"
+                                }`}
+                              />
+                            </div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </Section>
 
