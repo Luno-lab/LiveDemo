@@ -56,6 +56,25 @@ const fontOptions = [
   { id: "outfit", label: "Outfit", value: "Outfit, system-ui, sans-serif" },
 ];
 
+const buttonAccountStatusOptions = [
+  { id: "full", label: "Full", value: "full" },
+  { id: "address", label: "Address", value: "address" },
+];
+const buttonChainStatusOptions = [
+  { id: "full", label: "Full", value: "full" },
+  { id: "icon", label: "Icon", value: "icon" },
+  { id: "name", label: "Name", value: "name" },
+  { id: "none", label: "None", value: "none" },
+];
+const buttonDisplayPreferenceOptions = [
+  { id: "address", label: "Address", value: "address" },
+  { id: "name", label: "Name", value: "name" },
+];
+const buttonBalanceOptions = [
+  { id: "show", label: "Show", value: true },
+  { id: "hide", label: "Hide", value: false },
+];
+
 const colorGroupConfig = [
   {
     id: "General",
@@ -142,6 +161,14 @@ const groupChainOptions = (options) => {
     .filter((group) => group.options.length > 0);
 };
 
+const cleanOverrides = (overrides) =>
+  Object.entries(overrides || {}).reduce((acc, [key, value]) => {
+    const trimmed = typeof value === "string" ? value.trim() : value;
+    if (trimmed === "" || trimmed == null) return acc;
+    acc[key] = trimmed;
+    return acc;
+  }, {});
+
 const readLunoKitThemeTokens = () => {
   if (typeof window === "undefined") return null;
   const styles = getComputedStyle(document.documentElement);
@@ -211,6 +238,10 @@ export default function App() {
   });
   const [colorSearch, setColorSearch] = useState("");
   const [buttonLabel, setButtonLabel] = useState("Connect Wallet");
+  const [showBalance, setShowBalance] = useState(true);
+  const [displayPreference, setDisplayPreference] = useState("address");
+  const [accountStatus, setAccountStatus] = useState("full");
+  const [chainStatus, setChainStatus] = useState("full");
   const [copied, setCopied] = useState(false);
   const [isPreviewReady, setIsPreviewReady] = useState(false);
   const copyTimeoutRef = useRef(null);
@@ -540,6 +571,16 @@ export default function App() {
         )
       : "";
 
+    const connectButtonProps = [
+      `label={${JSON.stringify(buttonLabel || "Connect Wallet")}}`,
+      accountStatus !== "full" ? `accountStatus="${accountStatus}"` : null,
+      chainStatus !== "full" ? `chainStatus="${chainStatus}"` : null,
+      showBalance ? null : "showBalance={false}",
+      displayPreference !== "address"
+        ? `displayPreference="${displayPreference}"`
+        : null,
+    ].filter(Boolean);
+
     const lines = [
       "import { ConnectButton, LunoKitProvider } from \"@luno-kit/ui\";",
       "import { createConfig } from \"@luno-kit/react\";",
@@ -595,9 +636,7 @@ export default function App() {
       `      <LunoKitProvider config={config}${
         includeTheme ? " theme={theme}" : ""
       }${hasAppInfo ? " appInfo={appInfo}" : ""}>`,
-      `        <ConnectButton label={${JSON.stringify(
-        buttonLabel || "Connect Wallet"
-      )}} />`,
+      `        <ConnectButton ${connectButtonProps.join(" ")} />`,
       "      </LunoKitProvider>",
       "    </QueryClientProvider>",
       "  );",
@@ -615,6 +654,10 @@ export default function App() {
     currentColorOverrides,
     currentFontOverride,
     radiusOverrideTokens,
+    accountStatus,
+    chainStatus,
+    showBalance,
+    displayPreference,
     hasAppInfo,
     appInfo,
     buttonLabel,
@@ -695,7 +738,13 @@ export default function App() {
             )}
 
             {viewMode === "button" && showProvider && (
-              <ConnectButton label={buttonLabel || "Connect Wallet"} />
+              <ConnectButton
+                label={buttonLabel || "Connect Wallet"}
+                showBalance={showBalance}
+                displayPreference={displayPreference}
+                accountStatus={accountStatus}
+                chainStatus={chainStatus}
+              />
             )}
           </section>
         </div>
@@ -1030,6 +1079,7 @@ export default function App() {
                   )}
                 </div>
               </div>
+
             </div>
           </Section>
 
@@ -1101,17 +1151,47 @@ export default function App() {
           <Section
             id="button-options"
             title="Button Options"
-            description="Customize the ConnectButton label."
+            description="Customize the ConnectButton label and behavior."
             isOpen={openSection === "button-options"}
             onToggle={handleSectionToggle}
           >
-            <LabelInput
-              id="button-label"
-              label="Button label"
-              value={buttonLabel}
-              onChange={setButtonLabel}
-              placeholder="Connect Wallet"
-            />
+            <div className="grid gap-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <LabelInput
+                  id="button-label"
+                  label="Button label"
+                  value={buttonLabel}
+                  onChange={setButtonLabel}
+                  placeholder="Connect Wallet"
+                />
+                <OptionButtons
+                  label="Balance display"
+                  value={showBalance}
+                  options={buttonBalanceOptions}
+                  onChange={setShowBalance}
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <OptionButtons
+                  label="Account status"
+                  value={accountStatus}
+                  options={buttonAccountStatusOptions}
+                  onChange={setAccountStatus}
+                />
+                <OptionButtons
+                  label="Display preference"
+                  value={displayPreference}
+                  options={buttonDisplayPreferenceOptions}
+                  onChange={setDisplayPreference}
+                />
+              </div>
+              <OptionButtons
+                label="Chain status"
+                value={chainStatus}
+                options={buttonChainStatusOptions}
+                onChange={setChainStatus}
+              />
+            </div>
           </Section>
 
         </section>
@@ -1538,6 +1618,36 @@ function LabelInput({ id, label, value, onChange, placeholder }) {
   );
 }
 
+function OptionButtons({ label, value, options, onChange }) {
+  return (
+    <div className="space-y-2 text-sm text-white/70">
+      <span className="text-xs uppercase tracking-[0.16em] text-white/50">
+        {label}
+      </span>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const isActive = option.value === value;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => onChange(option.value)}
+              className={`rounded-full px-3 py-2 text-xs font-medium transition-colors ${
+                isActive
+                  ? "bg-white text-black"
+                  : "border border-white/20 text-white/70 hover:border-white/60"
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 const normalizeHex = (value) => {
@@ -1588,6 +1698,50 @@ const rgbToHex = ({ r, g, b }) =>
   `#${[r, g, b]
     .map((channel) => clamp(Math.round(channel), 0, 255).toString(16).padStart(2, "0"))
     .join("")}`;
+
+const parseColorWithAlpha = (value) => {
+  if (!value) return null;
+  const trimmed = value.trim();
+  const rgbaMatch = trimmed.match(/^rgba?\((.+)\)$/i);
+  if (rgbaMatch) {
+    const parts = rgbaMatch[1].split(/[,/ ]+/).filter(Boolean);
+    const rgb = hexToRgb(trimmed);
+    if (!rgb) return null;
+    let alpha = 1;
+    if (parts.length >= 4) {
+      const raw = parts[3].trim();
+      alpha = raw.endsWith("%")
+        ? clamp(parseFloat(raw) / 100, 0, 1)
+        : clamp(parseFloat(raw), 0, 1);
+    }
+    return { ...rgb, a: Number.isNaN(alpha) ? 1 : alpha };
+  }
+  const hexMatch = trimmed.match(/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+  if (hexMatch) {
+    let hex = hexMatch[1];
+    if (hex.length === 3) {
+      hex = hex
+        .split("")
+        .map((char) => `${char}${char}`)
+        .join("");
+    }
+    if (hex.length === 6) {
+      const rgb = hexToRgb(`#${hex}`);
+      return rgb ? { ...rgb, a: 1 } : null;
+    }
+    if (hex.length === 8) {
+      const rgb = hexToRgb(`#${hex.slice(0, 6)}`);
+      const alpha = parseInt(hex.slice(6), 16) / 255;
+      return rgb
+        ? { ...rgb, a: Number.isNaN(alpha) ? 1 : alpha }
+        : null;
+    }
+  }
+  const normalized = normalizeHex(trimmed);
+  if (!normalized) return null;
+  const rgb = hexToRgb(normalized);
+  return rgb ? { ...rgb, a: 1 } : null;
+};
 
 const rgbToHsv = ({ r, g, b }) => {
   const r1 = r / 255;
