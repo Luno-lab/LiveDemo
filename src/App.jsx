@@ -499,9 +499,9 @@ export default function App() {
   const appInfo = useMemo(() => {
     const info = {};
 
-    if (decorativeLight.trim()) {
+    if (decorativeLight.trim() || decorativeDark.trim()) {
       info.decorativeImage = {
-        light: decorativeLight.trim(),
+        ...(decorativeLight.trim() ? { light: decorativeLight.trim() } : {}),
         ...(decorativeDark.trim() ? { dark: decorativeDark.trim() } : {}),
       };
     }
